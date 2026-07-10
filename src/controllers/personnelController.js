@@ -113,3 +113,36 @@ const deletePersonnel = async (req, res) => {
 };
 
 module.exports = { createPersonnel, getAllPersonnel, getPersonnelById, updatePersonnel, deletePersonnel };
+
+// Route interne - appelee par medisys-auth lors de la creation/suppression d'un compte
+const createPersonnelFromAuth = async (req, res) => {
+  const { nom, prenom, email, role, hopital_id, user_id } = req.body;
+
+  try {
+    const newPersonnel = await pool.query(
+      `INSERT INTO personnel (nom, prenom, email, poste, role, hopital_id, user_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [nom, prenom || '', email, role, role, hopital_id, user_id]
+    );
+
+    res.status(201).json({ message: 'Fiche personnel creee.', personnel: newPersonnel.rows[0] });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Erreur serveur lors de la creation de la fiche personnel.' });
+  }
+};
+
+const deletePersonnelByUserId = async (req, res) => {
+  const { user_id } = req.params;
+
+  try {
+    await pool.query('DELETE FROM personnel WHERE user_id = $1', [user_id]);
+    res.status(200).json({ message: 'Fiche personnel supprimee.' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Erreur serveur lors de la suppression.' });
+  }
+};
+
+module.exports.createPersonnelFromAuth = createPersonnelFromAuth;
+module.exports.deletePersonnelByUserId = deletePersonnelByUserId;
